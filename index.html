@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Number Lookup — Clean Viewer</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#7dd3fc}
+    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:#e6eef6;background:linear-gradient(180deg,#071025 0%, #071634 60%);}
+    .wrap{max-width:920px;margin:36px auto;padding:28px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 8px 30px rgba(2,6,23,0.6);}
+    h1{margin:0 0 8px;font-size:20px}
+    p.lead{margin:0 0 18px;color:var(--muted);}
+    .row{display:flex;gap:12px;align-items:center}
+    input[type=text]{flex:1;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:#071225;color:#dfefff;outline:none;font-size:15px}
+    button{padding:11px 14px;border-radius:10px;border:0;background:var(--accent);color:#04202a;font-weight:600;cursor:pointer}
+    .small{font-size:13px;color:var(--muted)}
+    .results{margin-top:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+    .card{background:var(--card);padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+    .k{color:var(--muted);font-size:13px}
+    .v{margin-top:6px;font-weight:600;color:#eaf6ff}
+    .meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+    .credit{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+    .center{display:flex;justify-content:center}
+    .hint{margin-top:8px;color:var(--muted);font-size:13px}
+    .copy{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px 8px;border-radius:8px;color:var(--muted);cursor:pointer}
+    .spinner{width:20px;height:20px;border-radius:50%;border:3px solid rgba(255,255,255,0.08);border-top-color:var(--accent);animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .notice{padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);color:var(--muted);font-size:14px}
+    footer{margin-top:18px;text-align:center;color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Number Lookup</h1>
+    <p class="lead">Enter a mobile number to fetch clean, readable details from your API.</p>
+
+    <div class="row">
+      <input id="num" type="text" placeholder="Enter mobile number (eg. 9960553267)" value="" />
+      <button id="go">Lookup</button>
+    </div>
+    <div class="hint">If your API requires a different URL, change <code>API_BASE</code> inside the script.</div>
+
+    <div id="out" style="margin-top:18px"></div>
+
+    <div class="credit">Made by <strong>@pahadibilli</strong></div>
+  </div>
+
+  <script>
+    // --- CONFIG: use the Vercel serverless function path (proxy)
+    const API_BASE = '/api/proxy?number='; // <-- proxy path on same deployment
+
+    const numInput = document.getElementById('num');
+    const goBtn = document.getElementById('go');
+    const out = document.getElementById('out');
+
+    function sanitize(text){
+      if(text === null || text === undefined) return '';
+      return String(text).replace(/[<>]/g,'');
+    }
+
+    function renderNotice(msg){
+      out.innerHTML = '<div class="notice">'+msg+'</div>';
+    }
+
+    function renderResults(resultArray, respMeta){
+      if(!Array.isArray(resultArray) || resultArray.length === 0){
+        renderNotice('No results found for this number.');
+        return;
+      }
+
+      const container = document.createElement('div');
+      container.className = 'results';
+
+      resultArray.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        const name = sanitize(item.name) || '—';
+        const idn = sanitize(item.id_number) || '—';
+        const mobile = sanitize(item.mobile) || '—';
+        const alt = sanitize(item.alt_mobile) || '—';
+        const addr = sanitize(item.address) || '—';
+        const circle = sanitize(item.circle) || '—';
+        const email = sanitize(item.email) || '—';
+        const father = sanitize(item.father_name) || '—';
+        const id = item.id || '—';
+
+        card.innerHTML = `
+          <div class="k">Name</div>
+          <div class="v">${name}</div>
+
+          <div style="height:8px"></div>
+
+          <div class="k">ID Number</div>
+          <div class="v">${idn}</div>
+
+          <div style="height:8px"></div>
+
+          <div class="k">Mobile</div>
+          <div class="v">${mobile}</div>
+
+          <div class="k">Alt Mobile</div>
+          <div class="v">${alt}</div>
+
+          <div style="height:8px"></div>
+
+          <div class="k">Address</div>
+          <div class="v" style="font-weight:500;">${addr}</div>
+
+          <div style="height:8px"></div>
+
+          <div class="k">Circle</div>
+          <div class="v">${circle}</div>
+
+          <div class="k">Email</div>
+          <div class="v">${email}</div>
+
+          <div class="k">Father's Name</div>
+          <div class="v">${father}</div>
+
+          <div class="meta">
+            <div class="small">Record ID: ${id}</div>
+            <div>
+              <button class="copy" data-raw='${sanitize(JSON.stringify(item))}'>Copy</button>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      out.innerHTML = '';
+      out.appendChild(container);
+
+      out.querySelectorAll('.copy').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const raw = btn.getAttribute('data-raw');
+          navigator.clipboard?.writeText(raw).then(()=>{
+            btn.textContent = 'Copied';
+            setTimeout(()=>btn.textContent = 'Copy',1200);
+          }).catch(()=>{
+            alert('Copy failed — your browser may not allow clipboard access.');
+          });
+        });
+      });
+
+      if(respMeta){
+        const meta = document.createElement('div');
+        meta.style.marginTop = '10px';
+        meta.className = 'small';
+        meta.textContent = `API response time: ${respMeta.response_time_sec ?? '—'}s · success: ${respMeta.success ?? '—'}`;
+        out.appendChild(meta);
+      }
+    }
+
+    async function lookup(){
+      const number = numInput.value.trim();
+      if(!number){ renderNotice('Please enter a number first.'); return; }
+
+      out.innerHTML = '<div class="center"><div class="spinner"></div></div>';
+
+      try{
+        const url = API_BASE + encodeURIComponent(number);
+        const resp = await fetch(url, {cache:'no-store'});
+        if(!resp.ok){
+          renderNotice('API returned HTTP ' + resp.status + '. Check the API URL or logs.');
+          return;
+        }
+
+        const json = await resp.json();
+        const results = (json && json.data && json.data.result) ? json.data.result : (json.result || json.items || []);
+        renderResults(results, json);
+      }catch(err){
+        console.error(err);
+        renderNotice('Fetch failed. If CORS blocks the request or function errored, check Vercel logs.');
+      }
+    }
+
+    window.renderFromSample = function(){
+      const sample = window.__SAMPLE_JSON__;
+      if(!sample){ alert('No sample JSON found. Paste your API response into window.__SAMPLE_JSON__ in console.'); return; }
+      const results = (sample && sample.data && sample.data.result) ? sample.data.result : (sample.result || []);
+      renderResults(results, sample);
+    };
+
+    goBtn.addEventListener('click', lookup);
+    numInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') lookup(); });
+
+    numInput.addEventListener('input', ()=>{
+      const v = numInput.value.trim();
+      if(v.startsWith('{') && v.endsWith('}')){
+        try{
+          const obj = JSON.parse(v);
+          window.__SAMPLE_JSON__ = obj;
+          renderFromSample();
+          numInput.value = '';
+        }catch(e){ /* not valid json */ }
+      }
+    });
+  </script>
+</body>
+</html>
