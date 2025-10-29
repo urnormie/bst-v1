@@ -1,28 +1,25 @@
-// api/proxy.js
-export default async function handler(req, res) {
-  const number = req.query.number || '';
-  if (!number) {
-    return res.status(400).json({ error: 'Missing number query param. Use ?number=...' });
-  }
+// proxy.js
 
-  const target = https://number-info-anmol.vercel.app/?number=${encodeURIComponent(number)};
+import express from "express";
+import fetch from "node-fetch";
+
+const app = express();
+
+app.get("/api", async (req, res) => {
+  const { number } = req.query;
+
+  if (!number) {
+    return res.status(400).json({ error: "Number missing" });
+  }
 
   try {
-    const r = await fetch(target);
-    if (!r.ok) {
-      const txt = await r.text();
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      return res.status(502).json({ error: 'Upstream error', status: r.status, body: txt.slice(0, 1000) });
-    }
-    const data = await r.json();
-
-    // Return with CORS header so browser can read it
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
-    return res.status(200).json(data);
-  } catch (err) {
-    console.error('proxy error', err);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    return res.status(500).json({ error: 'Proxy fetch failed', details: String(err) });
+    const apiUrl = https://number-info-anmol.vercel.app/?number=${number};
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch data" });
   }
-}
+});
+
+app.listen(3000, () => console.log("Server running on port 3000"));
